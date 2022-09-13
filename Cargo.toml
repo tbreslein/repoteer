@@ -1,0 +1,10 @@
+[package]
+name = "repoteer"
+version = "0.1.0"
+author = "tbreslein"
+edition = "2021"
+description = "CLI tool for keeping multiple git repositories in sync"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
