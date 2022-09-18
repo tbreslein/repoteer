@@ -62,7 +62,7 @@
 
           # Configuration for the non-Rust dependencies
           buildInputs = with pkgs; [ openssl.dev ];
-          nativeBuildInputs = with pkgs; [ rustc cargo pkgconfig nixpkgs-fmt ];
+          nativeBuildInputs = with pkgs; [ rustc cargo pkgconfig nixpkgs-fmt bacon ];
           buildEnvVars = {
             PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig";
           };
