@@ -1,38 +1,40 @@
-use std::path::PathBuf;
+use std::process::Command;
 
-use clap::{Parser, Subcommand};
+use clap::Parser;
 
-#[derive(Parser, Debug)]
-#[clap(author, version, about, long_about = None)]
-struct Args {
-    /// Reads from specific config file
-    #[clap(short, long, value_parser, value_name = "FILE")]
-    config: Option<PathBuf>,
-
-    /// Verbose output
-    #[clap(short, long, action)]
-    verbose: bool,
-
-    #[clap(subcommand)]
-    command: Option<Commands>,
-}
-
-#[derive(Subcommand, Debug)]
-enum Commands {
-    /// Clone (if repo is not cloned yet) or pull, then push repos
-    Sync,
-}
+mod cli;
+use crate::cli::commands::Commands;
+use crate::cli::args::Args;
 
 fn main() {
     let cli = Args::parse();
 
     if let Some(config_file) = cli.config.as_deref() {
-        println!("Value for config: {}", config_file.to_str().unwrap_or("COULD NOT PARSE PATH TO STR!"));
+        println!(
+            "Value for config: {}",
+            config_file
+                .to_str()
+                .unwrap_or("COULD NOT PARSE PATH TO STR!")
+        );
     }
-    println!("Value for verbose: {}", cli.verbose);
+    if cli.verbose {
+        println!("Chose verbose!");
+    }
 
     match &cli.command {
-        Some(Commands::Sync) => {println!("Chose Sync")}
+        Some(Commands::Sync) => {
+            println!("Chose Sync")
+        }
         None => {}
-    }
+    };
+
+    let output = Command::new("git")
+        .args([
+            "clone",
+            "git@github.com:tbreslein/ansible.git",
+            "/home/tommy/test/ansible",
+        ])
+        .output()
+        .expect("guess it failed");
+    println!("status: {}", output.status);
 }
