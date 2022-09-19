@@ -3,8 +3,9 @@ use std::process::Command;
 use clap::Parser;
 
 mod cli;
-use crate::cli::commands::Commands;
+mod manifest;
 use crate::cli::args::Args;
+use crate::cli::commands::Commands;
 
 fn main() {
     let cli = Args::parse();
