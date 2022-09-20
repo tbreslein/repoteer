@@ -4,6 +4,7 @@ use self::repo::Repo;
 use color_eyre::eyre::{eyre, Report};
 use serde::Deserialize;
 use toml;
+use tracing::instrument;
 
 #[derive(Deserialize, Debug, PartialEq)]
 /// The record of which Repos should be managed by Repoteer
@@ -13,6 +14,8 @@ pub struct Manifest {
 }
 
 impl Manifest {
+
+    #[instrument]
     /// Returns a `Result<manifest::Manifest, Report>` from an `Option<PathBuf>`
     ///
     /// # Arguments
@@ -29,7 +32,7 @@ impl Manifest {
             Some(toml_path) => Self::from_toml_file(toml_path),
             None => match env::var("HOME") {
                 Ok(home_path_str) => {
-                    return Self::from_toml_file(PathBuf::from(
+                    let standard_manifest_path = PathBuf::from(
                         [
                             home_path_str,
                             "/.config".to_string(),
@@ -37,13 +40,21 @@ impl Manifest {
                             "/manifest.toml".to_string(),
                         ]
                         .concat(),
-                    ));
+                    );
+                    return if standard_manifest_path.exists() {
+                        Self::from_toml_file(standard_manifest_path)
+                    } else {
+                        Err(eyre!(
+                                "Global manifest file does not exist, and you did not pass a path to one. Global manifest was looked for at {:?}",
+                                standard_manifest_path.to_str().unwrap()))
+                    };
                 }
-                e @ Err(_) => Err(eyre!("Unable to read env var HOME! Error: {:?}", e)),
+                Err(e) => Err(eyre!("Unable to read env var HOME! Error: {:?}", e.to_string())),
             },
         };
     }
 
+    #[instrument]
     /// Returns a `Result<manifest::Manifest, Report>` from a `PathBuf`
     /// file
     ///
@@ -59,14 +70,15 @@ impl Manifest {
     fn from_toml_file(toml_path: PathBuf) -> Result<Manifest, Report> {
         return match fs::read_to_string(&toml_path) {
             Ok(s) => Self::from_toml_str(s.as_str()),
-            e @ Err(_) => Err(eyre!(
+            Err(e) => Err(eyre!(
                 "Unable to read from file {:?}! Error: {:?}",
                 toml_path,
-                e
+                e.to_string()
             )),
         };
     }
 
+    #[instrument]
     /// Returns a `Result<manifest::Manifest, Report>` from a toml formatted string
     ///
     /// # Arguments
@@ -92,9 +104,9 @@ impl Manifest {
     fn from_toml_str(toml_str: &str) -> Result<Manifest, Report> {
         return match toml::from_str(toml_str) {
             Ok(man) => Ok(man),
-            e @ Err(_) => Err(eyre!(
+            Err(e) => Err(eyre!(
                 "Unable to parse toml string to Manifesto instance! Error: {:?}",
-                e
+                e.to_string()
             )),
         };
     }
