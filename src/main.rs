@@ -15,6 +15,7 @@ fn main() -> Result<(), Report> {
     let cli = cli::args::Args::parse();
 
     let manifest = manifest::Manifest::new(cli.manifest)?;
+    println!("{:?}", manifest);
 
     return Ok(());
 
