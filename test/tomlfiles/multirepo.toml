@@ -1,0 +1,14 @@
+[[repos]]
+url = "git@github.com:testuser/testrepo.git"
+service = "Git"
+path = "/home/foo/testrepo"
+
+[[repos]]
+url = "git@bitbucket.com:bbuser/somerepo.git"
+service = "Git"
+path = "/home/bar/somerepo"
+
+[[repos]]
+url = "git@gitlab.com:gitlabuser/gitlabrepo.git"
+service = "Git"
+path = "/root/gitlabrepo"
