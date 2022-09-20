@@ -14,7 +14,6 @@ pub struct Manifest {
 }
 
 impl Manifest {
-
     #[instrument]
     /// Returns a `Result<manifest::Manifest, Report>` from an `Option<PathBuf>`
     ///
@@ -27,9 +26,9 @@ impl Manifest {
     /// ```
     /// let manifest = Manifest::from_toml_file("/path/to/some/toml/file.toml");   
     /// ```
-    pub fn new(opt_toml_path: Option<PathBuf>) -> Result<Self, Report> {
+    pub fn new(opt_toml_path: &Option<PathBuf>) -> Result<Self, Report> {
         return match opt_toml_path {
-            Some(toml_path) => Self::from_toml_file(toml_path),
+            Some(toml_path) => Self::from_toml_file(&toml_path),
             None => match env::var("HOME") {
                 Ok(home_path_str) => {
                     let standard_manifest_path = PathBuf::from(
@@ -42,14 +41,17 @@ impl Manifest {
                         .concat(),
                     );
                     return if standard_manifest_path.exists() {
-                        Self::from_toml_file(standard_manifest_path)
+                        Self::from_toml_file(&standard_manifest_path)
                     } else {
                         Err(eyre!(
                                 "Global manifest file does not exist, and you did not pass a path to one. Global manifest was looked for at {:?}",
                                 standard_manifest_path.to_str().unwrap()))
                     };
                 }
-                Err(e) => Err(eyre!("Unable to read env var HOME! Error: {:?}", e.to_string())),
+                Err(e) => Err(eyre!(
+                    "Unable to read env var HOME! Error: {:?}",
+                    e.to_string()
+                )),
             },
         };
     }
@@ -67,7 +69,7 @@ impl Manifest {
     /// ```
     /// let manifest = Manifest::from_toml_file(PathBuf::from("/path/to/some/toml/file.toml"));
     /// ```
-    fn from_toml_file(toml_path: PathBuf) -> Result<Manifest, Report> {
+    fn from_toml_file(toml_path: &PathBuf) -> Result<Manifest, Report> {
         return match fs::read_to_string(&toml_path) {
             Ok(s) => Self::from_toml_str(s.as_str()),
             Err(e) => Err(eyre!(
@@ -167,7 +169,7 @@ mod tests {
                 path: "/home/foo/testrepo".to_string(),
             }],
         };
-        assert_eq!(Manifest::from_toml_file(path).unwrap(), should_be);
+        assert_eq!(Manifest::from_toml_file(&path).unwrap(), should_be);
     }
 
     #[test]
@@ -232,7 +234,7 @@ mod tests {
                 },
             ],
         };
-        assert_eq!(Manifest::from_toml_file(path).unwrap(), should_be);
+        assert_eq!(Manifest::from_toml_file(&path).unwrap(), should_be);
     }
 
     #[test]
@@ -246,7 +248,7 @@ mod tests {
     #[test]
     fn from_toml_file_empty_repos() {
         let path = PathBuf::from(r"test/tomlfiles/emptyrepo.toml");
-        assert!(Manifest::from_toml_file(path).is_err());
+        assert!(Manifest::from_toml_file(&path).is_err());
     }
 
     #[test]
@@ -258,6 +260,6 @@ mod tests {
     #[test]
     fn from_toml_file_empty_string() {
         let path = PathBuf::from(r"test/tomlfiles/emptyfile.toml");
-        assert!(Manifest::from_toml_file(path).is_err());
+        assert!(Manifest::from_toml_file(&path).is_err());
     }
 }

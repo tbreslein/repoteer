@@ -1,21 +1,29 @@
 use clap::Parser;
 use color_eyre::eyre::Report;
+use operations::run_operations;
 use tracing::instrument;
 
 mod cli;
+mod config;
 mod manifest;
+mod operations;
 
 #[instrument]
 fn main() -> Result<(), Report> {
     #[cfg(feature = "capture-spantrace")]
     install_tracing();
-
     color_eyre::install()?;
 
-    let cli = cli::args::Args::parse();
+    let (manifest, config, command) = {
+        let cli = cli::args::Args::parse();
+        (
+            manifest::Manifest::new(&cli.manifest)?,
+            config::Config::new(&cli),
+            cli.command.unwrap_or(cli::command::Command::Sync)
+        )
+    };
 
-    let manifest = manifest::Manifest::new(cli.manifest)?;
-    println!("{:?}", manifest);
+    run_operations(command, manifest, config)?;
 
     return Ok(());
 

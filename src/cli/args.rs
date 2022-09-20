@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use clap::Parser;
 
-use super::commands::Commands;
+use super::command::Command;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -22,5 +22,5 @@ pub struct Args {
     pub verbose: bool,
 
     #[clap(subcommand)]
-    pub command: Option<Commands>,
+    pub command: Option<Command>,
 }
