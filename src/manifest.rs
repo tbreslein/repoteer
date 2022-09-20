@@ -1,10 +1,7 @@
-use std::{
-    env::{self, VarError},
-    fs, io,
-    path::PathBuf,
-};
+use std::{env, fs, path::PathBuf};
 
 use self::repo::Repo;
+use color_eyre::eyre::{eyre, Report};
 use serde::Deserialize;
 use toml;
 
@@ -15,15 +12,8 @@ pub struct Manifest {
     pub repos: Vec<Repo>,
 }
 
-#[derive(Debug)]
-pub enum Error {
-    TomlError(toml::de::Error),
-    FSError(io::Error),
-    VarError(VarError),
-}
-
 impl Manifest {
-    /// Returns a `Result<manifest::Manifest, manifest::Error>` from an `Option<PathBuf>`
+    /// Returns a `Result<manifest::Manifest, Report>` from an `Option<PathBuf>`
     ///
     /// # Arguments
     ///
@@ -34,48 +24,50 @@ impl Manifest {
     /// ```
     /// let manifest = Manifest::from_toml_file("/path/to/some/toml/file.toml");   
     /// ```
-    pub fn new(opt_toml_path: Option<PathBuf>) -> Result<Self, Error> {
+    pub fn new(opt_toml_path: Option<PathBuf>) -> Result<Self, Report> {
         return match opt_toml_path {
             Some(toml_path) => Self::from_toml_file(toml_path),
-            None => {
-                let home_path_str = env::var("HOME");
-                if let Err(e) = home_path_str {
-                    return Err(Error::VarError(e));
+            None => match env::var("HOME") {
+                Ok(home_path_str) => {
+                    return Self::from_toml_file(PathBuf::from(
+                        [
+                            home_path_str,
+                            "/.config".to_string(),
+                            "/repoteer".to_string(),
+                            "/manifest.toml".to_string(),
+                        ]
+                        .concat(),
+                    ));
                 }
-                let default_manifest_path: PathBuf = [
-                    home_path_str.unwrap(),
-                    ".config".to_string(),
-                    "repoteer".to_string(),
-                    "manifest.toml".to_string(),
-                ]
-                .iter()
-                .collect();
-
-                Self::from_toml_file(PathBuf::from(default_manifest_path))
-            }
+                e @ Err(_) => Err(eyre!("Unable to read env var HOME! Error: {:?}", e)),
+            },
         };
     }
 
-    /// Returns a `Result<manifest::Manifest, manifest::Error>` from a `PathBuf`
+    /// Returns a `Result<manifest::Manifest, Report>` from a `PathBuf`
     /// file
     ///
     /// # Arguments
     ///
-    /// * `toml_path` - string slice containing the path to a toml file
+    /// * `toml_path` - `PathBuf` pointing to the manifest file
     ///
     /// # Examples
     ///
     /// ```
-    /// let manifest = Manifest::from_toml_file("/path/to/some/toml/file.toml");   
+    /// let manifest = Manifest::from_toml_file(PathBuf::from("/path/to/some/toml/file.toml"));
     /// ```
-    fn from_toml_file(toml_path: PathBuf) -> Result<Self, Error> {
-        return match fs::read_to_string(toml_path) {
+    fn from_toml_file(toml_path: PathBuf) -> Result<Manifest, Report> {
+        return match fs::read_to_string(&toml_path) {
             Ok(s) => Self::from_toml_str(s.as_str()),
-            Err(e) => Err(Error::FSError(e)),
+            e @ Err(_) => Err(eyre!(
+                "Unable to read from file {:?}! Error: {:?}",
+                toml_path,
+                e
+            )),
         };
     }
 
-    /// Returns a `Result<manifest::Manifest, manifest::Error>` from a toml formatted string
+    /// Returns a `Result<manifest::Manifest, Report>` from a toml formatted string
     ///
     /// # Arguments
     ///
@@ -97,10 +89,13 @@ impl Manifest {
     /// "#;
     /// let manifest = Manifest::from_toml_str(s);   
     /// ```
-    fn from_toml_str(toml_str: &str) -> Result<Self, Error> {
+    fn from_toml_str(toml_str: &str) -> Result<Manifest, Report> {
         return match toml::from_str(toml_str) {
             Ok(man) => Ok(man),
-            Err(e) => Err(Error::TomlError(e)),
+            e @ Err(_) => Err(eyre!(
+                "Unable to parse toml string to Manifesto instance! Error: {:?}",
+                e
+            )),
         };
     }
 }
