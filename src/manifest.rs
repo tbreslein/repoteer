@@ -114,7 +114,7 @@ impl Manifest {
     }
 }
 
-mod repo {
+pub mod repo {
     use serde::Deserialize;
 
     #[derive(Deserialize, Debug, PartialEq)]
