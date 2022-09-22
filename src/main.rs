@@ -19,12 +19,11 @@ fn main() -> Result<(), Report> {
         (
             manifest::Manifest::new(&cli.manifest)?,
             config::Config::new(&cli),
-            cli.command.unwrap_or(cli::command::Command::Sync)
+            cli.command.unwrap_or(cli::command::Command::Sync),
         )
     };
 
     run_operations(command, manifest, config)?;
-
     return Ok(());
 }
 
