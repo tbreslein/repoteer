@@ -134,6 +134,9 @@ pub mod repo {
 
         /// Where the repository should be cloned to on the local filesystem
         pub path: String,
+
+        /// Whether the repo is supposed to be bare
+        pub is_bare: Option<bool>,
     }
 }
 
@@ -154,6 +157,7 @@ mod tests {
                 url: "git@github.com:testuser/testrepo.git".to_string(),
                 service: repo::VCService::Git,
                 path: "/home/foo/testrepo".to_string(),
+                is_bare: None,
             }],
         };
         assert_eq!(Manifest::from_toml_str(s).unwrap(), should_be);
@@ -167,6 +171,7 @@ mod tests {
                 url: "git@github.com:testuser/testrepo.git".to_string(),
                 service: repo::VCService::Git,
                 path: "/home/foo/testrepo".to_string(),
+                is_bare: None,
             }],
         };
         assert_eq!(Manifest::from_toml_file(&path).unwrap(), should_be);
@@ -196,16 +201,19 @@ mod tests {
                     url: "git@github.com:testuser/testrepo.git".to_string(),
                     service: repo::VCService::Git,
                     path: "/home/foo/testrepo".to_string(),
+                    is_bare: None,
                 },
                 Repo {
                     url: "git@bitbucket.com:bbuser/somerepo.git".to_string(),
                     service: repo::VCService::Git,
                     path: "/home/bar/somerepo".to_string(),
+                    is_bare: None,
                 },
                 Repo {
                     url: "git@gitlab.com:gitlabuser/gitlabrepo.git".to_string(),
                     service: repo::VCService::Git,
                     path: "/root/gitlabrepo".to_string(),
+                    is_bare: None,
                 },
             ],
         };
@@ -221,16 +229,19 @@ mod tests {
                     url: "git@github.com:testuser/testrepo.git".to_string(),
                     service: repo::VCService::Git,
                     path: "/home/foo/testrepo".to_string(),
+                    is_bare: None,
                 },
                 Repo {
                     url: "git@bitbucket.com:bbuser/somerepo.git".to_string(),
                     service: repo::VCService::Git,
                     path: "/home/bar/somerepo".to_string(),
+                    is_bare: None,
                 },
                 Repo {
                     url: "git@gitlab.com:gitlabuser/gitlabrepo.git".to_string(),
                     service: repo::VCService::Git,
                     path: "/root/gitlabrepo".to_string(),
+                    is_bare: None,
                 },
             ],
         };
