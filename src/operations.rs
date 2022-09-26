@@ -75,7 +75,6 @@ fn get_branches(path: &str) -> Result<Vec<String>> {
         .output()?;
     return Ok(get_output_lines(output)?
         .into_iter()
-        // .filter(|line| line.starts_with("+ ") || line.starts_with("* "))
         .map(|mut line| line.split_off(2))
         .collect());
 }
@@ -96,7 +95,13 @@ fn run_clone(repo: &Repo) -> Result<Output> {
 }
 
 fn get_current_branch(path: &str) -> Result<String> {
-    return Ok(String::from_utf8(std::process::Command::new("git").args(["branch", "--show-current"]).current_dir(path).output()?.stdout)?);
+    return Ok(String::from_utf8(
+        std::process::Command::new("git")
+            .args(["branch", "--show-current"])
+            .current_dir(path)
+            .output()?
+            .stdout,
+    )?);
 }
 
 fn run_pull(repo: &Repo) -> Result<Output> {
@@ -108,10 +113,13 @@ fn run_pull(repo: &Repo) -> Result<Output> {
             .output()?)
     };
     return if has_unstaged_changes(&repo.path)? {
-        Err(eyre!("Repo has unstaged changes on branch {} pull aborted!", get_current_branch(&repo.path)?))
+        Err(eyre!(
+            "Repo has unstaged changes on branch {} pull aborted!",
+            get_current_branch(&repo.path)?
+        ))
     } else {
         run_operation_with_worktrees(&repo, pull, "Pull")
-    }
+    };
 }
 
 fn run_push(repo: &Repo) -> Result<Output> {
@@ -149,8 +157,10 @@ where
             format!("{}", &repo.path)
         };
         match f(&path, &branch) {
-            Ok(_) => {},
-            Err(e) => {println!("   Error! Report: {}", e);}
+            Ok(_) => {}
+            Err(e) => {
+                println!("   Error! Report: {}", e);
+            }
         };
     }
     return Ok(std::process::Command::new("echo")
