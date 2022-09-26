@@ -3,10 +3,9 @@ use std::{env, fs, path::PathBuf};
 use self::repo::Repo;
 use color_eyre::eyre::{eyre, Report};
 use serde::Deserialize;
-use toml;
 use tracing::instrument;
 
-#[derive(Deserialize, Debug, PartialEq)]
+#[derive(Deserialize, Debug, PartialEq, Eq)]
 /// The record of which Repos should be managed by Repoteer
 pub struct Manifest {
     /// Vector of the Repository declarations
@@ -27,8 +26,8 @@ impl Manifest {
     /// let manifest = Manifest::from_toml_file("/path/to/some/toml/file.toml");   
     /// ```
     pub fn new(opt_toml_path: &Option<PathBuf>) -> Result<Self, Report> {
-        return match opt_toml_path {
-            Some(toml_path) => Self::from_toml_file(&toml_path),
+        match opt_toml_path {
+            Some(toml_path) => Self::from_toml_file(toml_path),
             None => match env::var("HOME") {
                 Ok(home_path_str) => {
                     let standard_manifest_path = PathBuf::from(
@@ -40,20 +39,20 @@ impl Manifest {
                         ]
                         .concat(),
                     );
-                    return if standard_manifest_path.exists() {
+                    if standard_manifest_path.exists() {
                         Self::from_toml_file(&standard_manifest_path)
                     } else {
                         Err(eyre!(
                                 "Global manifest file does not exist, and you did not pass a path to one. Global manifest was looked for at {:?}",
                                 standard_manifest_path.to_str().unwrap()))
-                    };
+                    }
                 }
                 Err(e) => Err(eyre!(
                     "Unable to read env var HOME! Error: {:?}",
                     e.to_string()
                 )),
             },
-        };
+        }
     }
 
     #[instrument]
@@ -104,27 +103,27 @@ impl Manifest {
     /// let manifest = Manifest::from_toml_str(s);   
     /// ```
     fn from_toml_str(toml_str: &str) -> Result<Manifest, Report> {
-        return match toml::from_str(toml_str) {
+        match toml::from_str(toml_str) {
             Ok(man) => Ok(man),
             Err(e) => Err(eyre!(
                 "Unable to parse toml string to Manifesto instance! Error: {:?}",
                 e.to_string()
             )),
-        };
+        }
     }
 }
 
 pub mod repo {
     use serde::Deserialize;
 
-    #[derive(Deserialize, Debug, PartialEq)]
+    #[derive(Deserialize, Debug, PartialEq, Eq)]
     /// Enumerates the types of repository services
     pub enum VCService {
         Git,
     }
 
     /// Models a single repository declaration
-    #[derive(Deserialize, Debug, PartialEq)]
+    #[derive(Deserialize, Debug, PartialEq, Eq)]
     pub struct Repo {
         /// URL of the remote repository
         pub url: String,

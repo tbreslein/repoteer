@@ -21,7 +21,10 @@ fn main() -> Result<()> {
         )
     };
 
-    return Ok(run_operations(command, manifest));
+    {
+        run_operations(command, manifest);
+        Ok(())
+    }
 }
 
 #[cfg(feature = "capture-spantrace")]

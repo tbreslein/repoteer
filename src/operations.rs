@@ -1,4 +1,4 @@
-use std::{path::Path, process::Output};
+use std::process::Output;
 
 use color_eyre::{eyre::bail, Result};
 
@@ -21,19 +21,18 @@ use crate::{
 /// let manifest = Manifest { ... };
 /// run_operations(command, manifest);
 /// ```
-pub fn run_operations(command: Command, manifest: Manifest) -> () {
+pub fn run_operations(command: Command, manifest: Manifest) {
     for repo in manifest.repos.iter() {
         println!("Repo:  {}", repo.url);
         println!("    at {}", repo.path);
         process(match command {
-            Command::Clone => run_clone(&repo),
-            Command::Pull => run_pull(&repo),
-            Command::Push => run_push(&repo),
-            Command::Sync => run_sync(&repo),
+            Command::Clone => run_clone(repo),
+            Command::Pull => run_pull(repo),
+            Command::Push => run_push(repo),
+            Command::Sync => run_sync(repo),
         });
-        println!("");
+        println!();
     }
-    return;
 }
 
 /// Enumerates the different git commands used throughout this module
@@ -58,7 +57,7 @@ impl GitCommand {
     /// * `branch` - The branch being operated on
     fn run(&self, repo: &Repo, path: &str, branch: &str) -> Result<Output> {
         let mut git_command_stump = std::process::Command::new("git");
-        return Ok(match self {
+        Ok(match self {
             GitCommand::Clone => git_command_stump
                 // this is a bit ugly,  but unfortunately just setting the last arg to an empty string
                 // in the case of passing --bare does not work, because the process still reads it as
@@ -71,7 +70,7 @@ impl GitCommand {
                     vec!["clone", &repo.url, &repo.path]
                 }),
             GitCommand::Pull => {
-                if has_unstaged_changes(&repo, &repo.path)? {
+                if has_unstaged_changes(repo, &repo.path)? {
                     bail!(
                         "Repo has unstaged changes on branch {} pull aborted!",
                         get_current_branch(&repo.path)?
@@ -89,7 +88,7 @@ impl GitCommand {
                 .args(["status", "--porcelain"])
                 .current_dir(path),
         }
-        .output()?);
+        .output()?)
     }
 }
 
@@ -99,7 +98,7 @@ impl GitCommand {
 ///
 /// * `repo` - The `Repo` being operated on
 fn run_clone(repo: &Repo) -> Result<Output> {
-    return GitCommand::Clone.run(&repo, &repo.path, "");
+    GitCommand::Clone.run(repo, &repo.path, "")
 }
 
 /// Runs a `git pull` operation, defined in GitCommand::run(...) and returns a `eyre::Result<Output>`
@@ -109,9 +108,9 @@ fn run_clone(repo: &Repo) -> Result<Output> {
 /// * `repo` - The `Repo` being operated on
 fn run_pull(repo: &Repo) -> Result<Output> {
     let pull = |path: &str, branch: &str| {
-        return GitCommand::Pull.run(&repo, &path, &branch);
+        GitCommand::Pull.run(repo, path, branch)
     };
-    return run_operation_with_worktrees(&repo, pull, "Pull");
+    run_operation_with_worktrees(repo, pull, "Pull")
 }
 
 /// Runs a `git push` operation, defined in GitCommand::run(...) and returns a `eyre::Result<Output>`
@@ -121,9 +120,9 @@ fn run_pull(repo: &Repo) -> Result<Output> {
 /// * `repo` - The `Repo` being operated on
 fn run_push(repo: &Repo) -> Result<Output> {
     let push = |path: &str, branch: &str| {
-        return GitCommand::Push.run(&repo, &path, &branch);
+        GitCommand::Push.run(repo, path, branch)
     };
-    return run_operation_with_worktrees(&repo, push, "Push");
+    run_operation_with_worktrees(repo, push, "Push")
 }
 
 /// Runs a `run_clone`, in case the repository has not been cloned yet, otherwise it runs `run_pull` and `run_push`, and returns a `eyre::Result<Output>` in either way
@@ -132,15 +131,12 @@ fn run_push(repo: &Repo) -> Result<Output> {
 ///
 /// * `repo` - The `Repo` being operated on
 fn run_sync(repo: &Repo) -> Result<Output> {
-    if !Path::new(&format!("{}/.git", repo.path)).exists() {
-        run_clone(repo)?;
-    } else {
-        run_pull(repo)?;
-        run_push(repo)?;
-    }
-    return Ok(std::process::Command::new("echo")
+    run_clone(repo)?;
+    run_pull(repo)?;
+    run_push(repo)?;
+    Ok(std::process::Command::new("echo")
         .arg("Sync complete!")
-        .output()?);
+        .output()?)
 }
 
 /// Wrapper function for running processing a `eyre::Result<Output>` and printing to stdout
@@ -148,7 +144,7 @@ fn run_sync(repo: &Repo) -> Result<Output> {
 /// # Arguments
 ///
 /// * `result` - The `Result<Output>` being processed
-fn process(result: Result<Output>) -> () {
+fn process(result: Result<Output>) {
     match result {
         Ok(output) => {
             if output.status.success() {
@@ -187,10 +183,10 @@ fn process(result: Result<Output>) -> () {
 /// method
 /// * `path` - The path to the branch being checked
 fn has_unstaged_changes(repo: &Repo, path: &str) -> Result<bool> {
-    return Ok(!GitCommand::StatusPorcelain
-        .run(&repo, &path, "")?
+    Ok(!GitCommand::StatusPorcelain
+        .run(repo, path, "")?
         .stdout
-        .is_empty());
+        .is_empty())
 }
 
 /// Parse an `Output.stdout` into a `Result<Vec<String>>` containing the lines out that stdout
@@ -199,10 +195,10 @@ fn has_unstaged_changes(repo: &Repo, path: &str) -> Result<bool> {
 ///
 /// * `output` - The `Output` being processed
 fn get_output_lines(output: Output) -> Result<Vec<String>> {
-    return Ok(String::from_utf8(output.stdout)?
+    Ok(String::from_utf8(output.stdout)?
         .lines()
         .map(|x| x.to_string())
-        .collect());
+        .collect())
 }
 
 /// Checks whether the repository at `path` is a worktree repository
@@ -216,7 +212,7 @@ fn has_worktrees(path: &str) -> Result<bool> {
         .current_dir(path)
         .output()?;
     let output_lines: Vec<String> = get_output_lines(output)?;
-    return Ok(output_lines.len() >= 1 && output_lines[0].contains("(bare)"));
+    Ok(!output_lines.is_empty() && output_lines[0].contains("(bare)"))
 }
 
 /// Checks the repository at `path`, and returns a `Result<Vec<String>>` containing the different
@@ -232,10 +228,10 @@ fn get_branches(path: &str) -> Result<Vec<String>> {
         .arg("branch")
         .current_dir(path)
         .output()?;
-    return Ok(get_output_lines(output)?
+    Ok(get_output_lines(output)?
         .into_iter()
         .map(|mut line| line.split_off(2))
-        .collect());
+        .collect())
 }
 
 /// Checks the repository at `path`, and returns a `Result<Vec<String>>` containing the different
@@ -249,17 +245,17 @@ fn get_worktrees(path: &str) -> Result<Vec<String>> {
         .args(["worktree", "list"])
         .current_dir(path)
         .output()?;
-    return Ok(get_output_lines(output)?
+    Ok(get_output_lines(output)?
         .into_iter()
-        .filter(|line| line.ends_with("]"))
+        .filter(|line| line.ends_with(']'))
         .map(|line| {
             line.split_whitespace()
-                .filter(|word| word.starts_with("[") && word.ends_with("]"))
-                .map(|word| word.strip_prefix("[").unwrap_or(word))
-                .map(|word| word.strip_suffix("]").unwrap_or(word))
+                .filter(|word| word.starts_with('[') && word.ends_with(']'))
+                .map(|word| word.strip_prefix('[').unwrap_or(word))
+                .map(|word| word.strip_suffix(']').unwrap_or(word))
                 .collect()
         })
-        .collect());
+        .collect())
 }
 
 /// Checks the repository at `path` and returns a `Result<String>` containing the name of the
@@ -269,13 +265,13 @@ fn get_worktrees(path: &str) -> Result<Vec<String>> {
 ///
 /// * `path` - The path to the branch being checked
 fn get_current_branch(path: &str) -> Result<String> {
-    return Ok(String::from_utf8(
+    Ok(String::from_utf8(
         std::process::Command::new("git")
             .args(["branch", "--show-current"])
             .current_dir(path)
             .output()?
             .stdout,
-    )?);
+    )?)
 }
 
 /// Wrapper function for git operations where the semantics of the git commands change depending on
@@ -302,7 +298,7 @@ where
         let path = if has_worktrees {
             format!("{}/{}", &repo.path, &branch)
         } else {
-            format!("{}", &repo.path)
+            (&repo.path).to_string()
         };
         match f(&path, &branch) {
             Ok(_) => {}
@@ -311,7 +307,7 @@ where
             }
         };
     }
-    return Ok(std::process::Command::new("echo")
+    Ok(std::process::Command::new("echo")
         .arg(format!("{} complete!", op))
-        .output()?);
+        .output()?)
 }
