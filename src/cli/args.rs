@@ -17,10 +17,6 @@ pub struct Args {
     #[clap(short, long, value_parser, value_name = "FILE")]
     pub manifest: Option<PathBuf>,
 
-    /// Verbose output
-    #[clap(short, long, action)]
-    pub verbose: bool,
-
     #[clap(subcommand)]
     pub command: Option<Command>,
 }
