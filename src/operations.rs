@@ -7,6 +7,20 @@ use crate::{
     manifest::{repo::Repo, Manifest},
 };
 
+/// Runs the operation given throught the CLI `command` field
+///
+/// # Arguments
+///
+/// * `command` - The `Command` the user gave when calling `repoteer`
+/// * `manifest` - The `Manifest` holding info about the repositories being managed
+///
+/// # Examples
+///
+/// ```
+/// let command = Command::clone;
+/// let manifest = Manifest { ... };
+/// run_operations(command, manifest);
+/// ```
 pub fn run_operations(command: Command, manifest: Manifest) -> () {
     for repo in manifest.repos.iter() {
         println!("Repo:  {}", repo.url);
@@ -22,8 +36,10 @@ pub fn run_operations(command: Command, manifest: Manifest) -> () {
     return;
 }
 
-// NOTE: Yes, this has overlap with crate::cli::Command. No, I do not care because I want to limit
-// the repoteer cli commands and do not want to add things like StatusPorcelain to that list.
+/// Enumerates the different git commands used throughout this module
+///
+///  NOTE: Yes, this has overlap with crate::cli::Command. No, I do not care because I want to limit
+///  the repoteer cli commands and do not want to add things like StatusPorcelain to that list.
 enum GitCommand {
     Clone,
     Pull,
@@ -32,6 +48,14 @@ enum GitCommand {
 }
 
 impl GitCommand {
+    /// Runs the git command declared by Self and returns a `eyre::Result<Output>`
+    ///
+    /// # Arguments
+    ///
+    /// * `self` - The `GitCommand` that called this method
+    /// * `repo` - The `Repo` being operated on
+    /// * `path` - The `path` where the command is being run
+    /// * `branch` - The branch being operated on
     fn run(&self, repo: &Repo, path: &str, branch: &str) -> Result<Output> {
         let mut git_command_stump = std::process::Command::new("git");
         return Ok(match self {
@@ -69,10 +93,20 @@ impl GitCommand {
     }
 }
 
+/// Runs a `git clone` operation, defined in GitCommand::run(...) and returns a `eyre::Result<Output>`
+///
+/// # Arguments
+///
+/// * `repo` - The `Repo` being operated on
 fn run_clone(repo: &Repo) -> Result<Output> {
     return GitCommand::Clone.run(&repo, &repo.path, "");
 }
 
+/// Runs a `git pull` operation, defined in GitCommand::run(...) and returns a `eyre::Result<Output>`
+///
+/// # Arguments
+///
+/// * `repo` - The `Repo` being operated on
 fn run_pull(repo: &Repo) -> Result<Output> {
     let pull = |path: &str, branch: &str| {
         return GitCommand::Pull.run(&repo, &path, &branch);
@@ -80,6 +114,11 @@ fn run_pull(repo: &Repo) -> Result<Output> {
     return run_operation_with_worktrees(&repo, pull, "Pull");
 }
 
+/// Runs a `git push` operation, defined in GitCommand::run(...) and returns a `eyre::Result<Output>`
+///
+/// # Arguments
+///
+/// * `repo` - The `Repo` being operated on
 fn run_push(repo: &Repo) -> Result<Output> {
     let push = |path: &str, branch: &str| {
         return GitCommand::Push.run(&repo, &path, &branch);
@@ -87,6 +126,11 @@ fn run_push(repo: &Repo) -> Result<Output> {
     return run_operation_with_worktrees(&repo, push, "Push");
 }
 
+/// Runs a `run_clone`, in case the repository has not been cloned yet, otherwise it runs `run_pull` and `run_push`, and returns a `eyre::Result<Output>` in either way
+///
+/// # Arguments
+///
+/// * `repo` - The `Repo` being operated on
 fn run_sync(repo: &Repo) -> Result<Output> {
     if !Path::new(&format!("{}/.git", repo.path)).exists() {
         run_clone(repo)?;
@@ -99,6 +143,11 @@ fn run_sync(repo: &Repo) -> Result<Output> {
         .output()?);
 }
 
+/// Wrapper function for running processing a `eyre::Result<Output>` and printing to stdout
+///
+/// # Arguments
+///
+/// * `result` - The `Result<Output>` being processed
 fn process(result: Result<Output>) -> () {
     match result {
         Ok(output) => {
@@ -127,6 +176,16 @@ fn process(result: Result<Output>) -> () {
     };
 }
 
+/// Checks whether the branch at `path` has unstaged changes and returns a `eyre::Result<bool>`
+///
+/// This is useful for doing `git pull` commands, where the operation needs to error out in that
+/// case.
+///
+/// # Arguments
+///
+/// * `repo` - Basically a dead argument, this is unfortunately needed for the GitCommand::run()
+/// method...
+/// * `path` - The path to the branch being checked
 fn has_unstaged_changes(repo: &Repo, path: &str) -> Result<bool> {
     return Ok(!GitCommand::StatusPorcelain
         .run(&repo, &path, "")?
@@ -134,6 +193,11 @@ fn has_unstaged_changes(repo: &Repo, path: &str) -> Result<bool> {
         .is_empty());
 }
 
+/// Parse an `Output.stdout` into a `Result<Vec<String>>` containing the lines out that stdout
+///
+/// # Arguments
+///
+/// * `output` - The `Output` being processed
 fn get_output_lines(output: Output) -> Result<Vec<String>> {
     return Ok(String::from_utf8(output.stdout)?
         .lines()
@@ -141,6 +205,11 @@ fn get_output_lines(output: Output) -> Result<Vec<String>> {
         .collect());
 }
 
+/// Checks whether the repository at `path` is a worktree repository
+///
+/// # Arguments
+///
+/// * `path` - The path to the branch being checked
 fn has_worktrees(path: &str) -> Result<bool> {
     let output = std::process::Command::new("git")
         .args(["worktree", "list"])
@@ -150,6 +219,14 @@ fn has_worktrees(path: &str) -> Result<bool> {
     return Ok(output_lines.len() >= 1 && output_lines[0].contains("(bare)"));
 }
 
+/// Checks the repository at `path`, and returns a `Result<Vec<String>>` containing the different
+/// branch names that have been checked out.
+///
+/// Only works for non-bare repositories.
+///
+/// # Arguments
+///
+/// * `path` - The path to the branch being checked
 fn get_branches(path: &str) -> Result<Vec<String>> {
     let output = std::process::Command::new("git")
         .arg("branch")
@@ -161,6 +238,12 @@ fn get_branches(path: &str) -> Result<Vec<String>> {
         .collect());
 }
 
+/// Checks the repository at `path`, and returns a `Result<Vec<String>>` containing the different
+/// worktree names that have been checked out.
+///
+/// # Arguments
+///
+/// * `path` - The path to the branch being checked
 fn get_worktrees(path: &str) -> Result<Vec<String>> {
     let output = std::process::Command::new("git")
         .args(["worktree", "list"])
@@ -179,6 +262,12 @@ fn get_worktrees(path: &str) -> Result<Vec<String>> {
         .collect());
 }
 
+/// Checks the repository at `path` and returns a `Result<String>` containing the name of the
+/// current branch
+///
+/// # Arguments
+///
+/// * `path` - The path to the branch being checked
 fn get_current_branch(path: &str) -> Result<String> {
     return Ok(String::from_utf8(
         std::process::Command::new("git")
@@ -189,6 +278,14 @@ fn get_current_branch(path: &str) -> Result<String> {
     )?);
 }
 
+/// Wrapper function for git operations where the semantics of the git commands change depending on
+/// whether the local repository is bare / has worktrees or not
+///
+/// # Arguments
+///
+/// * `repo` - The `Repo` being processed
+/// * `f` - The function being run
+/// * `op` - Name of the operation, needed for terminal output
 fn run_operation_with_worktrees<F>(repo: &Repo, f: F, op: &str) -> Result<Output>
 where
     F: Fn(&str, &str) -> Result<Output>,
@@ -199,7 +296,6 @@ where
     } else {
         get_branches(&repo.path)?
     };
-
     println!("      running op: {}", op);
     for branch in branches.into_iter() {
         println!("        branch: {}", branch);
