@@ -184,7 +184,7 @@ fn process(result: Result<Output>) -> () {
 /// # Arguments
 ///
 /// * `repo` - Basically a dead argument, this is unfortunately needed for the GitCommand::run()
-/// method...
+/// method
 /// * `path` - The path to the branch being checked
 fn has_unstaged_changes(repo: &Repo, path: &str) -> Result<bool> {
     return Ok(!GitCommand::StatusPorcelain
