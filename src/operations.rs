@@ -1,4 +1,4 @@
-use std::process::Output;
+use std::{path::Path, process::Output};
 
 use color_eyre::{eyre::eyre, Result};
 
@@ -158,9 +158,12 @@ fn run_push(repo: &Repo) -> Result<Output> {
 }
 
 fn run_sync(repo: &Repo) -> Result<Output> {
-    run_clone(repo)?;
-    run_pull(repo)?;
-    run_push(repo)?;
+    if !Path::new(&format!("{}/.git", repo.path)).exists() {
+        run_clone(repo)?;
+    } else {
+        run_pull(repo)?;
+        run_push(repo)?;
+    }
     return Ok(std::process::Command::new("echo")
         .arg("Sync complete!")
         .output()?);
