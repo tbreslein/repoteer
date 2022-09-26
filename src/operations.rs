@@ -26,10 +26,17 @@ fn process(result: Result<Output>) -> () {
     match result {
         Ok(output) => {
             if output.status.success() {
-                println!(
-                    "    Success! Output: {}",
-                    std::str::from_utf8(&output.stdout).unwrap_or("unknown output")
-                );
+                print!("    Success!");
+                match std::str::from_utf8(&output.stdout) {
+                    Ok(stdout) => {
+                        if !stdout.is_empty() {
+                            println!(" Output: {}", stdout);
+                        }
+                    }
+                    Err(e) => {
+                        println!(" Unable to convert output to String! Err: {:?}", e);
+                    }
+                }
             } else {
                 println!(
                     "    Failure! Output: {}",
@@ -76,6 +83,24 @@ fn get_branches(path: &str) -> Result<Vec<String>> {
     return Ok(get_output_lines(output)?
         .into_iter()
         .map(|mut line| line.split_off(2))
+        .collect());
+}
+
+fn get_worktrees(path: &str) -> Result<Vec<String>> {
+    let output = std::process::Command::new("git")
+        .args(["worktree", "list"])
+        .current_dir(path)
+        .output()?;
+    return Ok(get_output_lines(output)?
+        .into_iter()
+        .filter(|line| line.ends_with("]"))
+        .map(|line| {
+            line.split_whitespace()
+                .filter(|word| word.starts_with("[") && word.ends_with("]"))
+                .map(|word| word.strip_prefix("[").unwrap_or(word))
+                .map(|word| word.strip_suffix("]").unwrap_or(word))
+                .collect()
+        })
         .collect());
 }
 
@@ -145,8 +170,12 @@ fn run_operation_with_worktrees<F>(repo: &Repo, f: F, op: &str) -> Result<Output
 where
     F: Fn(&str, &str) -> Result<Output>,
 {
-    let branches = get_branches(&repo.path)?;
     let has_worktrees = has_worktrees(&repo.path)?;
+    let branches = if has_worktrees {
+        get_worktrees(&repo.path)?
+    } else {
+        get_branches(&repo.path)?
+    };
 
     println!("      running op: {}", op);
     for branch in branches.into_iter() {
