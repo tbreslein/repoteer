@@ -1,6 +1,6 @@
 use std::{path::Path, process::Output};
 
-use color_eyre::{eyre::eyre, Result};
+use color_eyre::{eyre::bail, Result};
 
 use crate::{
     cli::command::Command,
@@ -20,6 +20,83 @@ pub fn run_operations(command: Command, manifest: Manifest) -> () {
         println!("");
     }
     return;
+}
+
+// NOTE: Yes, this has overlap with crate::cli::Command. No, I do not care because I want to limit
+// the repoteer cli commands and do not want to add things like StatusPorcelain to that list.
+enum GitCommand {
+    Clone,
+    Pull,
+    Push,
+    StatusPorcelain,
+}
+
+impl GitCommand {
+    fn run(&self, repo: &Repo, path: &str, branch: &str) -> Result<Output> {
+        let mut git_command_stump = std::process::Command::new("git");
+        return Ok(match self {
+            GitCommand::Clone => git_command_stump
+                // this is a bit ugly,  but unfortunately just setting the last arg to an empty string
+                // in the case of passing --bare does not work, because the process still reads it as
+                // an argument and then complains about receiving too many arguments.
+                // basically, if I were to pass ["clone", &repo.url, &repo.path, ""], the command would
+                // be `git clone <url> <dir> ""`, and then it would complain about that last "".
+                .args(if repo.is_bare.is_some() && repo.is_bare.unwrap() {
+                    vec!["clone", &repo.url, &repo.path, "--bare"]
+                } else {
+                    vec!["clone", &repo.url, &repo.path]
+                }),
+            GitCommand::Pull => {
+                if has_unstaged_changes(&repo, &repo.path)? {
+                    bail!(
+                        "Repo has unstaged changes on branch {} pull aborted!",
+                        get_current_branch(&repo.path)?
+                    );
+                } else {
+                    git_command_stump
+                        .args(["pull", "origin", branch])
+                        .current_dir(path)
+                }
+            }
+            GitCommand::Push => git_command_stump
+                .args(["push", "origin", branch])
+                .current_dir(path),
+            GitCommand::StatusPorcelain => git_command_stump
+                .args(["status", "--porcelain"])
+                .current_dir(path),
+        }
+        .output()?);
+    }
+}
+
+fn run_clone(repo: &Repo) -> Result<Output> {
+    return GitCommand::Clone.run(&repo, &repo.path, "");
+}
+
+fn run_pull(repo: &Repo) -> Result<Output> {
+    let pull = |path: &str, branch: &str| {
+        return GitCommand::Pull.run(&repo, &path, &branch);
+    };
+    return run_operation_with_worktrees(&repo, pull, "Pull");
+}
+
+fn run_push(repo: &Repo) -> Result<Output> {
+    let push = |path: &str, branch: &str| {
+        return GitCommand::Push.run(&repo, &path, &branch);
+    };
+    return run_operation_with_worktrees(&repo, push, "Push");
+}
+
+fn run_sync(repo: &Repo) -> Result<Output> {
+    if !Path::new(&format!("{}/.git", repo.path)).exists() {
+        run_clone(repo)?;
+    } else {
+        run_pull(repo)?;
+        run_push(repo)?;
+    }
+    return Ok(std::process::Command::new("echo")
+        .arg("Sync complete!")
+        .output()?);
 }
 
 fn process(result: Result<Output>) -> () {
@@ -50,11 +127,9 @@ fn process(result: Result<Output>) -> () {
     };
 }
 
-fn has_unstaged_changes(path: &str) -> Result<bool> {
-    return Ok(!std::process::Command::new("git")
-        .args(["status", "--porcelain"])
-        .current_dir(path)
-        .output()?
+fn has_unstaged_changes(repo: &Repo, path: &str) -> Result<bool> {
+    return Ok(!GitCommand::StatusPorcelain
+        .run(&repo, &path, "")?
         .stdout
         .is_empty());
 }
@@ -104,21 +179,6 @@ fn get_worktrees(path: &str) -> Result<Vec<String>> {
         .collect());
 }
 
-fn run_clone(repo: &Repo) -> Result<Output> {
-    Ok(std::process::Command::new("git")
-        // this is a bit ugly,  but unfortunately just setting the last arg to an empty string
-        // in the case of passing --bare does not work, because the process still reads it as
-        // an argument and then complains about receiving too many arguments.
-        // basically, if I were to pass ["clone", &repo.url, &repo.path, ""], the command would
-        // be `git clone <url> <dir> ""`, and then it would complain about that last "".
-        .args(if repo.is_bare.is_some() && repo.is_bare.unwrap() {
-            vec!["clone", &repo.url, &repo.path, "--bare"]
-        } else {
-            vec!["clone", &repo.url, &repo.path]
-        })
-        .output()?)
-}
-
 fn get_current_branch(path: &str) -> Result<String> {
     return Ok(String::from_utf8(
         std::process::Command::new("git")
@@ -127,46 +187,6 @@ fn get_current_branch(path: &str) -> Result<String> {
             .output()?
             .stdout,
     )?);
-}
-
-fn run_pull(repo: &Repo) -> Result<Output> {
-    // TODO: this and push closure can be abstracted
-    let pull = |path: &str, branch: &str| {
-        Ok(std::process::Command::new("git")
-            .args(["pull", "origin", branch])
-            .current_dir(path)
-            .output()?)
-    };
-    return if has_unstaged_changes(&repo.path)? {
-        Err(eyre!(
-            "Repo has unstaged changes on branch {} pull aborted!",
-            get_current_branch(&repo.path)?
-        ))
-    } else {
-        run_operation_with_worktrees(&repo, pull, "Pull")
-    };
-}
-
-fn run_push(repo: &Repo) -> Result<Output> {
-    let push = |path: &str, branch: &str| {
-        return Ok(std::process::Command::new("git")
-            .args(["push", "origin", branch])
-            .current_dir(path)
-            .output()?);
-    };
-    return run_operation_with_worktrees(&repo, push, "Push");
-}
-
-fn run_sync(repo: &Repo) -> Result<Output> {
-    if !Path::new(&format!("{}/.git", repo.path)).exists() {
-        run_clone(repo)?;
-    } else {
-        run_pull(repo)?;
-        run_push(repo)?;
-    }
-    return Ok(std::process::Command::new("echo")
-        .arg("Sync complete!")
-        .output()?);
 }
 
 fn run_operation_with_worktrees<F>(repo: &Repo, f: F, op: &str) -> Result<Output>

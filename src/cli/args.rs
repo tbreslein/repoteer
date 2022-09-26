@@ -20,3 +20,9 @@ pub struct Args {
     #[clap(subcommand)]
     pub command: Option<Command>,
 }
+
+#[test]
+fn verify_cli() {
+    use clap::CommandFactory;
+    return Args::command().debug_assert();
+}
