@@ -1,6 +1,6 @@
 [package]
 name = "repoteer"
-version = "0.1.0"
+version = "0.2.0"
 authors = [ "tbreslein <github.com/tbreslein>" ]
 edition = "2021"
 description = "CLI tool for keeping multiple git repositories in sync"
