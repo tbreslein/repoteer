@@ -29,7 +29,7 @@
           pkgs = import nixpkgs {
             inherit system;
             overlays = [
-              rust-overlay.overlay
+              rust-overlay.overlays.default
               (self: super: {
                 # Because rust-overlay bundles multiple rust packages into one
                 # derivation, specify that mega-bundle here, so that crate2nix
