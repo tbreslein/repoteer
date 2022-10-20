@@ -40,7 +40,8 @@ struct RepoTask {
 
 impl RepoTask {
     pub fn new(repo: Repo) -> Self {
-        RepoTask { repo, state: "".to_string() }
+        let state = format!("Repo:  {}", &repo.url);
+        RepoTask { repo, state }
     }
 }
 
@@ -50,7 +51,7 @@ impl RepoTask {
 ///
 /// * `repo` - The repository the `command` is being run on
 /// * `command` - The `Command` the user gave when calling `repoteer`
-async fn handle_repo(task: RepoTask, command: Command) {
+async fn handle_repo(mut task: RepoTask, command: Command) {
     println!("Repo:  {}", task.repo.url);
     println!("    at {}", task.repo.path);
     process(match command {
