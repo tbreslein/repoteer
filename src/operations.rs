@@ -22,11 +22,26 @@ use crate::{
 /// run_operations(command, manifest);
 /// ```
 pub async fn run_operations(command: Command, manifest: Manifest) -> Result<()> {
-    let futures: Vec<_> = manifest.repos.into_iter().map(|repo| tokio::spawn(handle_repo(repo, command))).collect();
+    let futures: Vec<_> = manifest
+        .repos
+        .into_iter()
+        .map(|repo| tokio::spawn(handle_repo(RepoTask::new(repo), command)))
+        .collect();
     for f in futures.into_iter() {
         f.await?;
     }
     Ok(())
+}
+
+struct RepoTask {
+    pub repo: Repo,
+    pub state: String,
+}
+
+impl RepoTask {
+    pub fn new(repo: Repo) -> Self {
+        RepoTask { repo, state: "".to_string() }
+    }
 }
 
 /// Async function to run the CLI `command` on a single `Repo`
@@ -35,16 +50,16 @@ pub async fn run_operations(command: Command, manifest: Manifest) -> Result<()> 
 ///
 /// * `repo` - The repository the `command` is being run on
 /// * `command` - The `Command` the user gave when calling `repoteer`
-async fn handle_repo(repo: Repo, command: Command) {
-        println!("Repo:  {}", repo.url);
-        println!("    at {}", repo.path);
-        process(match command {
-            Command::Clone => run_clone(&repo),
-            Command::Pull => run_pull(&repo),
-            Command::Push => run_push(&repo),
-            Command::Sync => run_sync(&repo),
-        });
-        println!();
+async fn handle_repo(task: RepoTask, command: Command) {
+    println!("Repo:  {}", task.repo.url);
+    println!("    at {}", task.repo.path);
+    process(match command {
+        Command::Clone => run_clone(&task.repo),
+        Command::Pull => run_pull(&task.repo),
+        Command::Push => run_push(&task.repo),
+        Command::Sync => run_sync(&task.repo),
+    });
+    println!();
 }
 
 /// Enumerates the different git commands used throughout this module
