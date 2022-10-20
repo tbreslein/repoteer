@@ -1,5 +1,4 @@
 [[repos]]
 url = "git@github.com:testuser/testrepo.git"
-service = "Git"
 path = "/home/foo/testrepo"
 

@@ -59,7 +59,6 @@ If you do not provide a command to `repoteer`, it will default to `sync`.
 
 ## TODO
 
-- [ ] make "Git" the only possible service for now
 - [ ] fix bugs
 - [ ] run per branch and per repo operations async
     - [ ] figure out how to do output in that case; maybe just do one big output when every operation is finished?

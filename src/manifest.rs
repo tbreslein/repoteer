@@ -116,20 +116,11 @@ impl Manifest {
 pub mod repo {
     use serde::Deserialize;
 
-    #[derive(Deserialize, Debug, PartialEq, Eq)]
-    /// Enumerates the types of repository services
-    pub enum VCService {
-        Git,
-    }
-
     /// Models a single repository declaration
     #[derive(Deserialize, Debug, PartialEq, Eq)]
     pub struct Repo {
         /// URL of the remote repository
         pub url: String,
-
-        /// The version control service that is used
-        pub service: VCService,
 
         /// Where the repository should be cloned to on the local filesystem
         pub path: String,
@@ -148,13 +139,11 @@ mod tests {
         let s = r#"
             [[repos]]
             url = "git@github.com:testuser/testrepo.git"
-            service = "Git"
             path = "/home/foo/testrepo"
         "#;
         let should_be = Manifest {
             repos: vec![Repo {
                 url: "git@github.com:testuser/testrepo.git".to_string(),
-                service: repo::VCService::Git,
                 path: "/home/foo/testrepo".to_string(),
                 is_bare: None,
             }],
@@ -168,7 +157,6 @@ mod tests {
         let should_be = Manifest {
             repos: vec![Repo {
                 url: "git@github.com:testuser/testrepo.git".to_string(),
-                service: repo::VCService::Git,
                 path: "/home/foo/testrepo".to_string(),
                 is_bare: None,
             }],
@@ -181,36 +169,30 @@ mod tests {
         let s = r#"
             [[repos]]
             url = "git@github.com:testuser/testrepo.git"
-            service = "Git"
             path = "/home/foo/testrepo"
 
             [[repos]]
             url = "git@bitbucket.com:bbuser/somerepo.git"
-            service = "Git"
             path = "/home/bar/somerepo"
 
             [[repos]]
             url = "git@gitlab.com:gitlabuser/gitlabrepo.git"
-            service = "Git"
             path = "/root/gitlabrepo"
         "#;
         let should_be = Manifest {
             repos: vec![
                 Repo {
                     url: "git@github.com:testuser/testrepo.git".to_string(),
-                    service: repo::VCService::Git,
                     path: "/home/foo/testrepo".to_string(),
                     is_bare: None,
                 },
                 Repo {
                     url: "git@bitbucket.com:bbuser/somerepo.git".to_string(),
-                    service: repo::VCService::Git,
                     path: "/home/bar/somerepo".to_string(),
                     is_bare: None,
                 },
                 Repo {
                     url: "git@gitlab.com:gitlabuser/gitlabrepo.git".to_string(),
-                    service: repo::VCService::Git,
                     path: "/root/gitlabrepo".to_string(),
                     is_bare: None,
                 },
@@ -226,19 +208,16 @@ mod tests {
             repos: vec![
                 Repo {
                     url: "git@github.com:testuser/testrepo.git".to_string(),
-                    service: repo::VCService::Git,
                     path: "/home/foo/testrepo".to_string(),
                     is_bare: None,
                 },
                 Repo {
                     url: "git@bitbucket.com:bbuser/somerepo.git".to_string(),
-                    service: repo::VCService::Git,
                     path: "/home/bar/somerepo".to_string(),
                     is_bare: None,
                 },
                 Repo {
                     url: "git@gitlab.com:gitlabuser/gitlabrepo.git".to_string(),
-                    service: repo::VCService::Git,
                     path: "/root/gitlabrepo".to_string(),
                     is_bare: None,
                 },
