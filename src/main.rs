@@ -8,7 +8,8 @@ mod manifest;
 mod operations;
 
 #[instrument]
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     #[cfg(feature = "capture-spantrace")]
     install_tracing();
     color_eyre::install()?;
@@ -21,10 +22,7 @@ fn main() -> Result<()> {
         )
     };
 
-    {
-        run_operations(command, manifest);
-        Ok(())
-    }
+    run_operations(command, manifest).await
 }
 
 #[cfg(feature = "capture-spantrace")]

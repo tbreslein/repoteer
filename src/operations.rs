@@ -21,18 +21,30 @@ use crate::{
 /// let manifest = Manifest { ... };
 /// run_operations(command, manifest);
 /// ```
-pub fn run_operations(command: Command, manifest: Manifest) {
-    for repo in manifest.repos.iter() {
+pub async fn run_operations(command: Command, manifest: Manifest) -> Result<()> {
+    let futures: Vec<_> = manifest.repos.into_iter().map(|repo| tokio::spawn(handle_repo(repo, command))).collect();
+    for f in futures.into_iter() {
+        f.await?;
+    }
+    Ok(())
+}
+
+/// Async function to run the CLI `command` on a single `Repo`
+///
+/// # Arguments
+///
+/// * `repo` - The repository the `command` is being run on
+/// * `command` - The `Command` the user gave when calling `repoteer`
+async fn handle_repo(repo: Repo, command: Command) {
         println!("Repo:  {}", repo.url);
         println!("    at {}", repo.path);
         process(match command {
-            Command::Clone => run_clone(repo),
-            Command::Pull => run_pull(repo),
-            Command::Push => run_push(repo),
-            Command::Sync => run_sync(repo),
+            Command::Clone => run_clone(&repo),
+            Command::Pull => run_pull(&repo),
+            Command::Push => run_push(&repo),
+            Command::Sync => run_sync(&repo),
         });
         println!();
-    }
 }
 
 /// Enumerates the different git commands used throughout this module
@@ -107,9 +119,7 @@ fn run_clone(repo: &Repo) -> Result<Output> {
 ///
 /// * `repo` - The `Repo` being operated on
 fn run_pull(repo: &Repo) -> Result<Output> {
-    let pull = |path: &str, branch: &str| {
-        GitCommand::Pull.run(repo, path, branch)
-    };
+    let pull = |path: &str, branch: &str| GitCommand::Pull.run(repo, path, branch);
     run_operation_with_worktrees(repo, pull, "Pull")
 }
 
@@ -119,9 +129,7 @@ fn run_pull(repo: &Repo) -> Result<Output> {
 ///
 /// * `repo` - The `Repo` being operated on
 fn run_push(repo: &Repo) -> Result<Output> {
-    let push = |path: &str, branch: &str| {
-        GitCommand::Push.run(repo, path, branch)
-    };
+    let push = |path: &str, branch: &str| GitCommand::Push.run(repo, path, branch);
     run_operation_with_worktrees(repo, push, "Push")
 }
 
