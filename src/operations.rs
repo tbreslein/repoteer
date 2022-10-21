@@ -36,12 +36,16 @@ pub async fn run_operations(command: Command, manifest: Manifest) -> Result<()> 
 struct RepoTask {
     pub repo: Repo,
     pub state: String,
+    repo_name_string: String,
 }
 
 impl RepoTask {
     pub fn new(repo: Repo) -> Self {
-        let state = format!("Repo:  {}", &repo.url);
-        RepoTask { repo, state }
+        let repo_name_string = format!("Repo:  {}", &repo.url);
+        RepoTask { repo, state: "".to_string() , repo_name_string }
+    }
+    pub fn update_state(&mut self, new_state_string: String) {
+        self.state = format!("{}\n   {}", self.repo_name_string, new_state_string);
     }
 }
 
@@ -52,15 +56,14 @@ impl RepoTask {
 /// * `repo` - The repository the `command` is being run on
 /// * `command` - The `Command` the user gave when calling `repoteer`
 async fn handle_repo(mut task: RepoTask, command: Command) {
-    println!("Repo:  {}", task.repo.url);
-    println!("    at {}", task.repo.path);
+    task.update_state(format!("Running command: {:?}", command));
+    println!("{}", task.state);
     process(match command {
         Command::Clone => run_clone(&task.repo),
         Command::Pull => run_pull(&task.repo),
         Command::Push => run_push(&task.repo),
         Command::Sync => run_sync(&task.repo),
     });
-    println!();
 }
 
 /// Enumerates the different git commands used throughout this module
