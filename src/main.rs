@@ -37,6 +37,6 @@ Copyright (c) 2022  Tommy Breslein <github.com/tbreslein>
 Running command: {:?}\n",
         "repoteer".green(),
         VERSION,
-        command.magenta()
+        command.yellow()
     );
 }

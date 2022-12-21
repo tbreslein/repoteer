@@ -51,7 +51,7 @@ impl RepoTask {
     pub fn update_state(&mut self, new_state_string: String) {
         self.state = format!(
             "{}\n   {}",
-            self.repo_name_string.magenta(),
+            self.repo_name_string.blue(),
             new_state_string
         );
     }
