@@ -107,9 +107,7 @@ fn run_clone(repo: &Repo) -> Result<Output> {
 ///
 /// * `repo` - The `Repo` being operated on
 fn run_pull(repo: &Repo) -> Result<Output> {
-    let pull = |path: &str, branch: &str| {
-        GitCommand::Pull.run(repo, path, branch)
-    };
+    let pull = |path: &str, branch: &str| GitCommand::Pull.run(repo, path, branch);
     run_operation_with_worktrees(repo, pull, "Pull")
 }
 
@@ -119,9 +117,7 @@ fn run_pull(repo: &Repo) -> Result<Output> {
 ///
 /// * `repo` - The `Repo` being operated on
 fn run_push(repo: &Repo) -> Result<Output> {
-    let push = |path: &str, branch: &str| {
-        GitCommand::Push.run(repo, path, branch)
-    };
+    let push = |path: &str, branch: &str| GitCommand::Push.run(repo, path, branch);
     run_operation_with_worktrees(repo, push, "Push")
 }
 
