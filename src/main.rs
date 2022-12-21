@@ -1,4 +1,5 @@
 use clap::Parser;
+use cli::command::Command;
 use color_eyre::eyre::Result;
 use operations::run_operations;
 use tracing::instrument;
@@ -22,5 +23,17 @@ async fn main() -> Result<()> {
         )
     };
 
+    print_header(&command);
     run_operations(command, manifest).await
+}
+
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+fn print_header(command: &Command) {
+    println!(
+        "Repoteer v{}
+Copyright (c)  Tommy Breslein <github.com/tbreslein>
+
+Running command: {:?}",
+        VERSION, command
+    );
 }

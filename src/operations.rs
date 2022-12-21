@@ -47,6 +47,9 @@ impl RepoTask {
     pub fn update_state(&mut self, new_state_string: String) {
         self.state = format!("{}\n   {}", self.repo_name_string, new_state_string);
     }
+    pub fn print_state(&self) {
+        println!("{}\n", self.state);
+    }
 }
 
 /// Async function to run the CLI `command` on a single `Repo`
@@ -56,13 +59,11 @@ impl RepoTask {
 /// * `repo` - The repository the `command` is being run on
 /// * `command` - The `Command` the user gave when calling `repoteer`
 async fn handle_repo(mut task: RepoTask, command: Command) {
-    task.update_state(format!("Running command: {:?}", command));
-    println!("{}", task.state);
     process(match command {
-        Command::Clone => run_clone(&task.repo),
-        Command::Pull => run_pull(&task.repo),
-        Command::Push => run_push(&task.repo),
-        Command::Sync => run_sync(&task.repo),
+        Command::Clone => run_clone(&mut task),
+        Command::Pull => run_pull(&mut task),
+        Command::Push => run_push(&mut task),
+        Command::Sync => run_sync(&mut task),
     });
 }
 
@@ -128,8 +129,8 @@ impl GitCommand {
 /// # Arguments
 ///
 /// * `repo` - The `Repo` being operated on
-fn run_clone(repo: &Repo) -> Result<Output> {
-    GitCommand::Clone.run(repo, &repo.path, "")
+fn run_clone(task: &RepoTask) -> Result<Output> {
+    GitCommand::Clone.run(&task.repo, &task.repo.path, "")
 }
 
 /// Runs a `git pull` operation, defined in GitCommand::run(...) and returns a `eyre::Result<Output>`
@@ -137,9 +138,9 @@ fn run_clone(repo: &Repo) -> Result<Output> {
 /// # Arguments
 ///
 /// * `repo` - The `Repo` being operated on
-fn run_pull(repo: &Repo) -> Result<Output> {
-    let pull = |path: &str, branch: &str| GitCommand::Pull.run(repo, path, branch);
-    run_operation_with_worktrees(repo, pull, "Pull")
+fn run_pull(task: &mut RepoTask) -> Result<Output> {
+    let pull = |repo: &Repo, path: &str, branch: &str| GitCommand::Pull.run(repo, path, branch);
+    run_operation_with_worktrees(task, pull, "Pull")
 }
 
 /// Runs a `git push` operation, defined in GitCommand::run(...) and returns a `eyre::Result<Output>`
@@ -147,9 +148,9 @@ fn run_pull(repo: &Repo) -> Result<Output> {
 /// # Arguments
 ///
 /// * `repo` - The `Repo` being operated on
-fn run_push(repo: &Repo) -> Result<Output> {
-    let push = |path: &str, branch: &str| GitCommand::Push.run(repo, path, branch);
-    run_operation_with_worktrees(repo, push, "Push")
+fn run_push(task: &mut RepoTask) -> Result<Output> {
+    let push = |repo: &Repo, path: &str, branch: &str| GitCommand::Push.run(repo, path, branch);
+    run_operation_with_worktrees(task, push, "Push")
 }
 
 /// Runs a `run_clone`, in case the repository has not been cloned yet, otherwise it runs `run_pull` and `run_push`, and returns a `eyre::Result<Output>` in either way
@@ -157,12 +158,13 @@ fn run_push(repo: &Repo) -> Result<Output> {
 /// # Arguments
 ///
 /// * `repo` - The `Repo` being operated on
-fn run_sync(repo: &Repo) -> Result<Output> {
-    run_clone(repo)?;
-    run_pull(repo)?;
-    run_push(repo)?;
+fn run_sync(task: &mut RepoTask) -> Result<Output> {
+    run_clone(task)?;
+    run_pull(task)?;
+    run_push(task)?;
+    task.update_state(format!("Sync complete!"));
     Ok(std::process::Command::new("echo")
-        .arg("Sync complete!")
+        .arg(&mut task.state.clone())
         .output()?)
 }
 
@@ -175,11 +177,12 @@ fn process(result: Result<Output>) {
     match result {
         Ok(output) => {
             if output.status.success() {
-                print!("    Success!");
                 match std::str::from_utf8(&output.stdout) {
                     Ok(stdout) => {
                         if !stdout.is_empty() {
-                            println!(" Output: {}", stdout);
+                            println!("Success! Output: \n{}", stdout);
+                        } else {
+                            println!("Success!");
                         }
                     }
                     Err(e) => {
@@ -188,13 +191,13 @@ fn process(result: Result<Output>) {
                 }
             } else {
                 println!(
-                    "    Failure! Output: {}",
+                    "Failure! Output: {}",
                     std::str::from_utf8(&output.stderr).unwrap_or("unknown error")
                 );
             }
         }
         Err(report) => {
-            println!("   Error! Report: {:?}", report);
+            println!("Error! Report: {:?}", report);
         }
     };
 }
@@ -309,32 +312,34 @@ fn get_current_branch(path: &str) -> Result<String> {
 /// * `repo` - The `Repo` being processed
 /// * `f` - The function being run
 /// * `op` - Name of the operation, needed for terminal output
-fn run_operation_with_worktrees<F>(repo: &Repo, f: F, op: &str) -> Result<Output>
+fn run_operation_with_worktrees<F>(task: &mut RepoTask, f: F, op: &str) -> Result<Output>
 where
-    F: Fn(&str, &str) -> Result<Output>,
+    F: Fn(&Repo, &str, &str) -> Result<Output>,
 {
-    let has_worktrees = has_worktrees(&repo.path)?;
+    let has_worktrees = has_worktrees(&task.repo.path)?;
     let branches = if has_worktrees {
-        get_worktrees(&repo.path)?
+        get_worktrees(&task.repo.path)?
     } else {
-        get_branches(&repo.path)?
+        get_branches(&task.repo.path)?
     };
-    println!("      running op: {}", op);
     for branch in branches.into_iter() {
-        println!("        branch: {}", branch);
+        task.update_state(format!("running operation {} on branch {}", op, branch));
+        task.print_state();
         let path = if has_worktrees {
-            format!("{}/{}", &repo.path, &branch)
+            format!("{}/{}", &task.repo.path, &branch)
         } else {
-            (&repo.path).to_string()
+            (&task.repo.path).to_string()
         };
-        match f(&path, &branch) {
+        match f(&task.repo, &path, &branch) {
             Ok(_) => {}
             Err(e) => {
-                println!("   Error! Report: {}", e);
+                task.update_state(format!("   Error! Report: {}", e));
+                task.print_state();
             }
         };
     }
+    task.update_state(format!("{} complete!", op));
     Ok(std::process::Command::new("echo")
-        .arg(format!("{} complete!", op))
+        .arg(&mut task.state.clone())
         .output()?)
 }
