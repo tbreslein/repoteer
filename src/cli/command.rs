@@ -1,6 +1,6 @@
 use clap::Subcommand;
 
-#[derive(Subcommand, Debug)]
+#[derive(Subcommand, Debug, Copy, Clone)]
 /// Enumerates the different commands you can pass to repoteer
 pub enum Command {
     /// Clone (if repo is not cloned yet) or pull, then push repos
