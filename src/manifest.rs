@@ -23,7 +23,7 @@ impl Manifest {
     /// # Examples
     ///
     /// ```
-    /// let manifest = Manifest::from_toml_file("/path/to/some/toml/file.toml");   
+    /// let manifest = Manifest::from_toml_file("/path/to/some/toml/file.toml");
     /// ```
     pub fn new(opt_toml_path: &Option<PathBuf>) -> Result<Self, Report> {
         match opt_toml_path {
@@ -100,7 +100,7 @@ impl Manifest {
     ///     service = "Git"
     ///     path = "/home/bar/somerepo"
     /// "#;
-    /// let manifest = Manifest::from_toml_str(s);   
+    /// let manifest = Manifest::from_toml_str(s);
     /// ```
     fn from_toml_str(toml_str: &str) -> Result<Manifest, Report> {
         match toml::from_str(toml_str) {
