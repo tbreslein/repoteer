@@ -2,6 +2,9 @@
 
 CLI tool for keeping multiple git repositories across your machine in sync with their remotes.
 
+I wrote this because I have a ton of repositories on my system and I work on them from multiple machines, so I needed an easy command to go through all of those local repos and synchronise them.
+    This tool does exactly what I need it to do, and apart from squashing the one bug I found, I probably won't do anything to it anytime soon, so don't mind it if the last commit is months old.
+
 ## Installation
 
 I have not really packaged this for any system yet, and I so far have only tested the program on Linux.
@@ -65,7 +68,7 @@ If you do not provide a command to `repoteer`, it will default to `sync`.
 
 Please use the github issues for suggestions, bugs, etc., and if you would like to contribute (especially when it comes to packaging or OS support, because I probably will not implement that myself) just open pull requests.
 
-Just keep things civil, make your intent clear on the issues and PRs, etc..
+Just keep things civil, make your intent clear on the issues and PRs, etc.
 
 ## Licensing
 
