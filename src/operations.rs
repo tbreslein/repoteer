@@ -1,6 +1,6 @@
-use std::process::Output;
-
 use color_eyre::{eyre::bail, Result};
+use colored::*;
+use std::process::Output;
 
 use crate::{
     cli::command::Command,
@@ -42,10 +42,18 @@ struct RepoTask {
 impl RepoTask {
     pub fn new(repo: Repo) -> Self {
         let repo_name_string = format!("Repo:  {}", &repo.url);
-        RepoTask { repo, state: "".to_string() , repo_name_string }
+        RepoTask {
+            repo,
+            state: "".to_string(),
+            repo_name_string,
+        }
     }
     pub fn update_state(&mut self, new_state_string: String) {
-        self.state = format!("{}\n   {}", self.repo_name_string, new_state_string);
+        self.state = format!(
+            "{}\n   {}",
+            self.repo_name_string.magenta(),
+            new_state_string
+        );
     }
     pub fn print_state(&self) {
         println!("{}\n", self.state);
@@ -162,7 +170,7 @@ fn run_sync(task: &mut RepoTask) -> Result<Output> {
     run_clone(task)?;
     run_pull(task)?;
     run_push(task)?;
-    task.update_state(format!("Sync complete!"));
+    task.update_state(format!("{}", "Sync complete!".bright_green()));
     Ok(std::process::Command::new("echo")
         .arg(&mut task.state.clone())
         .output()?)
@@ -180,24 +188,29 @@ fn process(result: Result<Output>) {
                 match std::str::from_utf8(&output.stdout) {
                     Ok(stdout) => {
                         if !stdout.is_empty() {
-                            println!("Success! Output: \n{}", stdout);
+                            println!("{} Output:\n{}", "Success!".bright_green(), stdout);
                         } else {
-                            println!("Success!");
+                            println!("{}", "Success!".bright_green());
                         }
                     }
                     Err(e) => {
-                        println!(" Unable to convert output to String! Err: {:?}", e);
+                        println!(
+                            "{} Err: {:?}",
+                            "Unable to convert output to String!".bright_red(),
+                            e
+                        );
                     }
                 }
             } else {
                 println!(
-                    "Failure! Output: {}",
+                    "{} Output: {}",
+                    "Failure!".bright_red(),
                     std::str::from_utf8(&output.stderr).unwrap_or("unknown error")
                 );
             }
         }
         Err(report) => {
-            println!("Error! Report: {:?}", report);
+            println!("{} Report: {:?}", "Error!".bright_red(), report);
         }
     };
 }
@@ -323,7 +336,11 @@ where
         get_branches(&task.repo.path)?
     };
     for branch in branches.into_iter() {
-        task.update_state(format!("running operation {} on branch {}", op, branch));
+        task.update_state(format!(
+            "running operation {} on branch {}",
+            op.cyan(),
+            branch.cyan()
+        ));
         task.print_state();
         let path = if has_worktrees {
             format!("{}/{}", &task.repo.path, &branch)

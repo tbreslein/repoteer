@@ -1,6 +1,7 @@
 use clap::Parser;
 use cli::command::Command;
-use color_eyre::eyre::Result;
+use color_eyre::{eyre::Result, owo_colors::OwoColorize};
+use colored::*;
 use operations::run_operations;
 use tracing::instrument;
 
@@ -30,10 +31,12 @@ async fn main() -> Result<()> {
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 fn print_header(command: &Command) {
     println!(
-        "Repoteer v{}
-Copyright (c)  Tommy Breslein <github.com/tbreslein>
+        "{} {}
+Copyright (c) 2022  Tommy Breslein <github.com/tbreslein>
 
-Running command: {:?}",
-        VERSION, command
+Running command: {:?}\n",
+        "repoteer".green(),
+        VERSION,
+        command.magenta()
     );
 }
