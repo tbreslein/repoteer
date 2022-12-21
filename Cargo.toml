@@ -18,3 +18,4 @@ toml = "0.5.9"
 tokio = { version = "1", features = ["full"] }
 tracing = "0.1.36"
 tracing-subscriber = "0.3.15"
+colored = "2.0.0"
