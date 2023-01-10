@@ -32,7 +32,7 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 fn print_header(command: &Command) {
     println!(
         "{} {}
-Copyright (c) 2022  Tommy Breslein <github.com/tbreslein>
+Copyright (c) 2022-2023  Tommy Breslein <github.com/tbreslein>
 
 Running command: {:?}\n",
         "repoteer".green(),
